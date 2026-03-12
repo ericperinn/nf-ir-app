@@ -6,8 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Platform } from 'react-native';
-import '../global.css';
-
 import HomeScreen from './src/screens/HomeScreen';
 import ListagemScreen from './src/screens/ListagemScreen';
 import NovaNotaScreen from './src/screens/NovaNotaScreen';
@@ -18,15 +16,7 @@ import { COLORS } from './src/utils/constants';
 import type { RootStackParamList, TabParamList } from './src/types/navigation';
 
 const Tab = createBottomTabNavigator<TabParamList>();
-const Stack = createNativeStackNavigator<RootStackParamList>();
-
-function NovaNotaStack() {
-    return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="NovaNotaStack" component={NovaNotaScreen as any} />
-        </Stack.Navigator>
-    );
-}
+const RootNavigator = createNativeStackNavigator<RootStackParamList>();
 
 function TabNavigator() {
     return (
@@ -65,26 +55,20 @@ function TabNavigator() {
     );
 }
 
-function RootStack() {
-    return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Tabs" component={TabNavigator} />
-            <Stack.Screen
-                name="NovaNotaStack"
-                component={NovaNotaStack}
-                options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen name="DetalhesNota" component={DetalhesNotaScreen} />
-        </Stack.Navigator>
-    );
-}
-
 export default function App() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <NavigationContainer>
                 <StatusBar style="light" />
-                <RootStack />
+                <RootNavigator.Navigator screenOptions={{ headerShown: false }}>
+                    <RootNavigator.Screen name="Tabs" component={TabNavigator} />
+                    <RootNavigator.Screen
+                        name="NovaNotaStack"
+                        component={NovaNotaScreen as any}
+                        options={{ presentation: 'modal' }}
+                    />
+                    <RootNavigator.Screen name="DetalhesNota" component={DetalhesNotaScreen as any} />
+                </RootNavigator.Navigator>
             </NavigationContainer>
         </GestureHandlerRootView>
     );
