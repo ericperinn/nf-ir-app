@@ -66,6 +66,10 @@ npm install
 cp .env.example .env
 # Edite .env e preencha EXPO_PUBLIC_GEMINI_API_KEY
 
+# Ambiente do frontend (.env)
+# O app lê variáveis do arquivo .env na raiz (ignorado pelo Git). Exemplo:
+# EXPO_PUBLIC_GEMINI_API_KEY=suachave
+
 # Iniciar o servidor de desenvolvimento
 npx expo start
 ```
