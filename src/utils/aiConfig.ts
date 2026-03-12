@@ -8,12 +8,24 @@ import type { AIAnalysisResult } from '../types';
 // Depois cole abaixo em GEMINI_API_KEY.
 // ============================================================
 
-const GEMINI_API_KEY: string =
-    (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) ||
-    'SUA_CHAVE_AQUI';
-
 const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const ENV_GEMINI_API_KEY: string =
+    (typeof process !== 'undefined' && process.env && (process.env.EXPO_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY)) ||
+    '';
+
+const resolveGeminiApiKey = (): string => {
+    const key = ENV_GEMINI_API_KEY.trim();
+    if (!key || key === 'SUA_CHAVE_AQUI') {
+        throw new Error(
+            'Configure sua chave da API Gemini via variável de ambiente EXPO_PUBLIC_GEMINI_API_KEY.\n' +
+            'Obtenha gratuitamente em: https://aistudio.google.com/app/apikey'
+        );
+    }
+    return key;
+};
+
+const buildGeminiUrl = (apiKey: string): string =>
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
 const CATEGORIAS_VALIDAS = [
     'saude', 'educacao', 'previdencia', 'doacao',
@@ -47,6 +59,58 @@ Regras:
 - Para deducivel: true se for despesa de saúde, educação, previdência ou doação. false caso contrário.
 - Retorne SOMENTE o JSON, sem explicações.`;
 
+// Remove caracteres de controle ASCII (C0) para evitar strings malformadas,
+// registros truncados no SQLite ou interpretações inesperadas ao exibir os textos.
+// Tabs/linhas (\u0009, \u000A) são mantidos para permitir quebras de linha inseridas pela IA.
+// Os demais caracteres são mantidos porque os dados são exibidos em UI e gravados
+// via consultas parametrizadas, evitando injeção.
+const sanitizeString = (value: unknown, maxLength = 200): string | null => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim().replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+    if (!trimmed) return null;
+    return trimmed.slice(0, maxLength);
+};
+
+const normalizeValorTotal = (value: unknown): string | null => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value) || value < 0) return null;
+        return value.toFixed(2);
+    }
+
+    const cleaned = String(value).trim().replace(/,/g, '.');
+    const match = cleaned.match(/^\d+(?:\.\d+)?$/);
+    if (!match) return null;
+
+    const num = parseFloat(match[0]);
+    if (!Number.isFinite(num) || num < 0) return null;
+    return num.toFixed(2);
+};
+
+const validateAIResponse = (parsed: any): AIAnalysisResult => {
+    const emitente = sanitizeString(parsed.emitente);
+    const cnpj_cpf = sanitizeString(parsed.cnpj_cpf);
+    const numero = parsed.numero != null ? sanitizeString(String(parsed.numero)) : null;
+    const data_emissao = sanitizeString(parsed.data_emissao, 20);
+    const valor_total = normalizeValorTotal(parsed.valor_total);
+    const tipo = TIPOS_VALIDOS.includes(parsed.tipo) ? parsed.tipo : null;
+    const categoria = CATEGORIAS_VALIDAS.includes(parsed.categoria) ? parsed.categoria : null;
+    const descricao = sanitizeString(parsed.descricao, 500);
+    const deducivel = typeof parsed.deducivel === 'boolean' ? parsed.deducivel : null;
+
+    return {
+        emitente,
+        cnpj_cpf,
+        numero,
+        data_emissao,
+        valor_total,
+        tipo,
+        categoria,
+        descricao,
+        deducivel,
+    };
+};
+
 /**
  * Envia imagem em base64 para o Google Gemini e retorna dados extraídos da NF.
  */
@@ -54,12 +118,7 @@ export async function analisarNotaFiscal(
     base64Image: string,
     mimeType: string = 'image/jpeg'
 ): Promise<AIAnalysisResult> {
-    if (GEMINI_API_KEY === 'SUA_CHAVE_AQUI') {
-        throw new Error(
-            'Configure sua chave da API Gemini em src/utils/aiConfig.ts\n' +
-            'Obtenha gratuitamente em: https://aistudio.google.com/app/apikey'
-        );
-    }
+    const apiKey = resolveGeminiApiKey();
 
     const body = {
         contents: [
@@ -82,7 +141,7 @@ export async function analisarNotaFiscal(
         },
     };
 
-    const response = await fetch(GEMINI_URL, {
+    const response = await fetch(buildGeminiUrl(apiKey), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -110,21 +169,9 @@ export async function analisarNotaFiscal(
 
     try {
         const parsed = JSON.parse(cleaned);
-        return {
-            emitente: parsed.emitente || null,
-            cnpj_cpf: parsed.cnpj_cpf || null,
-            numero: parsed.numero ? String(parsed.numero) : null,
-            data_emissao: parsed.data_emissao || null,
-            valor_total: parsed.valor_total != null ? String(parsed.valor_total) : null,
-            tipo: TIPOS_VALIDOS.includes(parsed.tipo) ? parsed.tipo : null,
-            categoria: CATEGORIAS_VALIDAS.includes(parsed.categoria) ? parsed.categoria : null,
-            descricao: parsed.descricao || null,
-            deducivel: typeof parsed.deducivel === 'boolean' ? parsed.deducivel : null,
-        };
+        return validateAIResponse(parsed);
     } catch (e) {
         console.error(e);
         throw new Error('Não foi possível interpretar a resposta da IA. Tente novamente.');
     }
 }
-
-export { GEMINI_API_KEY };

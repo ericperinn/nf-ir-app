@@ -40,6 +40,11 @@ const FORM_INICIAL: NFFormData = {
     observacoes: '',
 };
 
+// Valores mínimos em BRL (centavos) para evitar cadastros inválidos.
+const MIN_VALOR_TOTAL = 0.01;
+const MIN_PERCENTUAL = 0;
+const MAX_PERCENTUAL = 100;
+
 export default function NovaNotaScreen({ navigation }: Props) {
     const [form, setForm] = useState<NFFormData>(FORM_INICIAL);
     const [saving, setSaving] = useState(false);
@@ -135,10 +140,37 @@ export default function NovaNotaScreen({ navigation }: Props) {
         return formatted;
     };
 
+    const isValidDateParts = (year: number, month: number, day: number): boolean => {
+        if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+        const date = new Date(Date.UTC(year, month - 1, day));
+        return (
+            date.getUTCFullYear() === year &&
+            date.getUTCMonth() === month - 1 &&
+            date.getUTCDate() === day
+        );
+    };
+
     const parseDateToISO = (str: string): string => {
         const parts = str.split('/');
-        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        if (parts.length === 3) {
+            const [dayStr, monthStr, yearStr] = parts;
+            const year = Number(yearStr);
+            const month = Number(monthStr);
+            const day = Number(dayStr);
+            if (Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(day) && isValidDateParts(year, month, day)) {
+                return `${yearStr}-${monthStr}-${dayStr}`;
+            }
+        }
         return str;
+    };
+
+    const isValidISODate = (iso: string): boolean => {
+        if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+        const [yearStr, monthStr, dayStr] = iso.split('-');
+        const year = Number(yearStr);
+        const month = Number(monthStr);
+        const day = Number(dayStr);
+        return Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(day) && isValidDateParts(year, month, day);
     };
 
     // --- Salvar ---
@@ -146,8 +178,25 @@ export default function NovaNotaScreen({ navigation }: Props) {
         if (!form.emitente.trim()) {
             Alert.alert('Campo obrigatório', 'Informe o nome do emitente.'); return;
         }
-        if (!form.valor_total || isNaN(parseFloat(form.valor_total.replace(',', '.')))) {
-            Alert.alert('Campo obrigatório', 'Informe o valor total válido.'); return;
+        const valor = parseFloat(form.valor_total.replace(',', '.'));
+        if (!form.valor_total || Number.isNaN(valor) || valor < MIN_VALOR_TOTAL) {
+            Alert.alert('Valor inválido', `Informe um valor total maior ou igual a ${MIN_VALOR_TOTAL}.`);
+            return;
+        }
+
+        const dataEmissaoISO = form.data_emissao.includes('/')
+            ? parseDateToISO(form.data_emissao)
+            : form.data_emissao;
+
+        if (!isValidISODate(dataEmissaoISO)) {
+            Alert.alert('Data inválida', 'Informe a data no formato DD/MM/AAAA.');
+            return;
+        }
+
+        const percentual = parseFloat(form.percentual_deducao);
+        if (Number.isNaN(percentual) || percentual < MIN_PERCENTUAL || percentual > MAX_PERCENTUAL) {
+            Alert.alert('Percentual inválido', `Informe um percentual de dedução entre ${MIN_PERCENTUAL} e ${MAX_PERCENTUAL}.`);
+            return;
         }
 
         setSaving(true);
@@ -158,13 +207,13 @@ export default function NovaNotaScreen({ navigation }: Props) {
                 numero: form.numero || null,
                 emitente: form.emitente.trim(),
                 cnpj_cpf: form.cnpj_cpf || null,
-                data_emissao: form.data_emissao,
-                valor_total: parseFloat(form.valor_total.replace(',', '.')),
+                data_emissao: dataEmissaoISO,
+                valor_total: valor,
                 categoria: form.categoria,
                 descricao: form.descricao || null,
                 foto_uri: form.foto_uri,
                 deducivel: form.deducivel,
-                percentual_deducao: parseFloat(form.percentual_deducao) || 100,
+                percentual_deducao: percentual,
                 observacoes: form.observacoes || null,
             });
             Alert.alert('✅ Nota salva!', 'A nota fiscal foi registrada com sucesso.', [

@@ -62,6 +62,10 @@ cd nf-ir-app
 # Instalar dependências
 npm install
 
+# Configure a chave da API do Gemini (opcional para usar a análise por IA)
+cp .env.example .env
+# Edite .env e preencha EXPO_PUBLIC_GEMINI_API_KEY
+
 # Iniciar o servidor de desenvolvimento
 npx expo start
 ```
