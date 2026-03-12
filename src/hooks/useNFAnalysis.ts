@@ -39,7 +39,7 @@ export default function useNFAnalysis(): UseNFAnalysisReturn {
                 if (!base64 && imageUri) {
                     try {
                         base64 = await FileSystem.readAsStringAsync(imageUri, {
-                            encoding: FileSystem.EncodingType.Base64,
+                            encoding: 'base64' as any,
                         });
                     } catch {
                         // Fallback: importar da API legada
