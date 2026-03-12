@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "NF - Imposto de Renda",
+    "slug": "nf-ir-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A3C5E"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.seu.nfirapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Usamos a câmera para fotografar suas notas fiscais.",
+        "NSPhotoLibraryUsageDescription": "Usamos a galeria para selecionar fotos de notas fiscais.",
+        "NSPhotoLibraryAddUsageDescription": "Para salvar fotos das notas fiscais."
+      }
+    },
+    "android": {
+      "package": "com.seu.nfirapp",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#1A3C5E",
+        "foregroundImage": "./assets/icon.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite selecionar fotos de notas fiscais da sua galeria.",
+          "cameraPermission": "Permite fotografar suas notas fiscais."
+        }
+      ],
+      [
+        "expo-sqlite"
+      ]
+    ]
+  }
+}
