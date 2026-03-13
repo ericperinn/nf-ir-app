@@ -9,8 +9,8 @@ import type { AIAnalysisResult } from '../types';
 // ============================================================
 
 const GEMINI_API_KEY: string =
-    (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) ||
-    'SUA_CHAVE_AQUI';
+    process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'SUA_CHAVE_AQUI';
+
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
